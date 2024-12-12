@@ -263,7 +263,7 @@ void LaserscanMerger::scanCallback(sensor_msgs::msg::LaserScan::SharedPtr scan, 
 			}
 			pcl::toROSMsg(fov_cloud, tmpCloud1);
 		}
-		tmpCloud1.header.frame_id = scan->header.frame_id;
+		tmpCloud1.header = scan->header;
 		pcl_ros::transformPointCloud(destination_frame.c_str(), tmpCloud1, tmpCloud2, *tf_buffer_);
 	}
 	catch (tf2::TransformException &ex)
