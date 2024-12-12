@@ -5,6 +5,8 @@
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/utils.h>
 #include <tf2/exceptions.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
@@ -42,6 +44,7 @@ private:
 
 	std::vector<pcl::PCLPointCloud2> clouds;
 	std::vector<string> input_topics;
+	std::map<std::string, std::pair<double, double>> fov_map;
 
 	void laserscan_topic_parser();
 
@@ -52,6 +55,9 @@ private:
 	double scan_time;
 	double range_min;
 	double range_max;
+
+	bool use_fov;
+	string fovs;
 
 	string destination_frame;
 	string cloud_destination_topic;
@@ -65,6 +71,8 @@ LaserscanMerger::LaserscanMerger() : Node("laserscan_multi_merger")
 	this->declare_parameter<std::string>("cloud_destination_topic", "/merged_cloud");
 	this->declare_parameter<std::string>("scan_destination_topic", "/scan_multi");
 	this->declare_parameter<std::string>("laserscan_topics", "");
+	this->declare_parameter<std::string>("fovs", "");
+	this->declare_parameter("use_fov", false);
 	this->declare_parameter("angle_min", -3.14);
 	this->declare_parameter("angle_max", 3.14);
 	this->declare_parameter("angle_increment", 0.0058);
@@ -76,6 +84,8 @@ LaserscanMerger::LaserscanMerger() : Node("laserscan_multi_merger")
 	this->get_parameter("cloud_destination_topic", cloud_destination_topic);
 	this->get_parameter("scan_destination_topic", scan_destination_topic);
 	this->get_parameter("laserscan_topics", laserscan_topics);
+	this->get_parameter("fovs", fovs);
+	this->get_parameter("use_fov", use_fov);
 	this->get_parameter("angle_min", angle_min);
 	this->get_parameter("angle_max", angle_max);
 	this->get_parameter("angle_increment", angle_increment);
@@ -204,17 +214,56 @@ void LaserscanMerger::laserscan_topic_parser()
 			RCLCPP_INFO(this->get_logger(), "Not subscribed to any topic.");
 		}
 	}
+
+	if (use_fov)
+	{
+		std::vector<std::string> t;
+		stringstream fov_iss(fovs);
+		std::string w;
+		while (fov_iss >> w)
+			t.push_back(w);
+
+		if (t.size() % 3 != 0 || t.size() / 3 != input_topics.size())
+		{
+			RCLCPP_WARN(this->get_logger(), "FoV-Config broken... ignoring %lu", t.size());
+			use_fov = false;
+		} else
+		{
+			for (uint32_t index = 0; index < t.size(); index += 3)
+				fov_map.insert({t[index], {stod(t[index + 1]), stod(t[index + 2])}});
+		}
+		RCLCPP_INFO(this->get_logger(), "Using FoV");
+	}
 }
 
 void LaserscanMerger::scanCallback(sensor_msgs::msg::LaserScan::SharedPtr scan, std::string topic)
 {
 	sensor_msgs::msg::PointCloud2 tmpCloud1, tmpCloud2;
-
 	try
 	{
 		// Verify that TF knows how to transform from the received scan to the destination scan frame
-		tf_buffer_->lookupTransform(scan->header.frame_id.c_str(), destination_frame.c_str(), scan->header.stamp, rclcpp::Duration(1, 0));
+		geometry_msgs::msg::TransformStamped transform = tf_buffer_->lookupTransform(scan->header.frame_id.c_str(),destination_frame.c_str(), scan->header.stamp, rclcpp::Duration(1, 0));
 		projector_.transformLaserScanToPointCloud(scan->header.frame_id, *scan, tmpCloud1, *tf_buffer_, range_max);
+		if (use_fov)
+		{
+			// 1. Get yaw, 2. Rotate point -yaw/rad, 3. Check if point in FoV, 4. If yes add original point to cloud
+			double fov = fov_map[topic].first;
+			double offset = fov_map[topic].second;
+			double yaw = tf2::getYaw(transform.transform.rotation) + offset;
+			pcl::PointCloud<pcl::PointXYZ> in_cloud, fov_cloud;
+			pcl::fromROSMsg(tmpCloud1,in_cloud);
+			for (auto p: in_cloud.points)
+			{
+				double x = cos(-yaw) * p.x - sin(-yaw) * p.y;
+				double y = sin(-yaw) * p.x + cos(-yaw) * p.y;
+				if (fabs(atan2(y, x)) < (fov / 2))
+				{
+					fov_cloud.emplace_back(p);
+				}
+			}
+			pcl::toROSMsg(fov_cloud, tmpCloud1);
+		}
+		tmpCloud1.header.frame_id = scan->header.frame_id;
 		pcl_ros::transformPointCloud(destination_frame.c_str(), tmpCloud1, tmpCloud2, *tf_buffer_);
 	}
 	catch (tf2::TransformException &ex)

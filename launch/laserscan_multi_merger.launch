@@ -7,6 +7,8 @@
 		<param name="scan_destination_topic" value="/scan_multi"/>
 		<param name="laserscan_topics" value ="/scansx /scandx" />
 		<!-- LIST OF THE LASER SCAN TOPICS TO SUBSCRIBE -->
+		<param name="use_fov" value="False"/>
+    <param name="fovs" value="/scansx 3.1415 3.1415 /scandx 3.1415 0.0"/> <!--n* (topic fov offset)-->
 		<param name="angle_min" value="-3.14"/>
 		<param name="angle_max" value="3.14"/>
 		<param name="angle_increment" value="0.00437"/>
