@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.20)
 project(ira_laser_tools)
 
 # Default to C99
@@ -27,23 +27,6 @@ find_package(pcl_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 
-set(dependencies
-  rclcpp
-  rclcpp_action
-  rclcpp_lifecycle
-  std_msgs
-  geometry_msgs
-  sensor_msgs
-  laser_geometry
-  tf2
-  tf2_ros
-  tf2_geometry_msgs
-  pcl_ros
-  Eigen3
-  PCL
-)
-
-
 # bugfix for g++-Warning
 #   "<command-line>:0:0: warning: missing whitespace after the macro name"
 remove_definitions(-DDISABLE_LIBUSB-1.0)
@@ -56,16 +39,58 @@ remove_definitions(-DDISABLE_LIBUSB-1.0)
 ## Your package locations should be listed before other locations
 
 add_executable(laserscan_multi_merger src/laserscan_multi_merger.cpp)
-ament_target_dependencies(laserscan_multi_merger ${dependencies})
 target_include_directories(laserscan_multi_merger PUBLIC ${EIGEN_INCLUDE_DIRS})
 target_include_directories(laserscan_multi_merger PUBLIC ${PCL_INCLUDE_DIRS})
-target_link_libraries(laserscan_multi_merger ${PCL_LIBRARIES})
+target_link_libraries(laserscan_multi_merger PUBLIC
+  ${geometry_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  laser_geometry::laser_geometry
+  pcl_ros::bag_to_pcd_lib
+  pcl_ros::combined_pointcloud_to_pcd_lib
+  pcl_ros::pcd_to_pointcloud_lib
+  pcl_ros::pcl_ros_filter
+  pcl_ros::pcl_ros_filters
+  pcl_ros::pcl_ros_tf
+  pcl_ros::pointcloud_to_pcd_lib
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  rclcpp_lifecycle::rclcpp_lifecycle
+  sensor_msgs::sensor_msgs_library
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
+  tf2_ros::static_transform_broadcaster_node
+  tf2_ros::tf2_ros
+  ${PCL_LIBRARIES}
+  ${EIGEN_INCLUDE_DIRS}
+)
 
 add_executable(laserscan_virtualizer src/laserscan_virtualizer.cpp)
-ament_target_dependencies(laserscan_virtualizer ${dependencies})
 target_include_directories(laserscan_virtualizer PUBLIC ${EIGEN_INCLUDE_DIRS})
 target_include_directories(laserscan_virtualizer PUBLIC ${PCL_INCLUDE_DIRS})
-target_link_libraries(laserscan_virtualizer ${PCL_LIBRARIES})
+target_link_libraries(laserscan_virtualizer PUBLIC
+  ${geometry_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  laser_geometry::laser_geometry
+  pcl_ros::bag_to_pcd_lib
+  pcl_ros::combined_pointcloud_to_pcd_lib
+  pcl_ros::pcd_to_pointcloud_lib
+  pcl_ros::pcl_ros_filter
+  pcl_ros::pcl_ros_filters
+  pcl_ros::pcl_ros_tf
+  pcl_ros::pointcloud_to_pcd_lib
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  rclcpp_lifecycle::rclcpp_lifecycle
+  sensor_msgs::sensor_msgs_library
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
+  tf2_ros::static_transform_broadcaster_node
+  tf2_ros::tf2_ros
+  ${PCL_LIBRARIES}
+  ${EIGEN_INCLUDE_DIRS}
+)
 
 #############
 ## Install ##
