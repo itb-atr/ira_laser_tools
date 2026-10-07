@@ -6,10 +6,10 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2/utils.h>
-#include <tf2/exceptions.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_ros/buffer.h>
+#include <tf2/utils.hpp>
+#include <tf2/exceptions.hpp>
+#include <tf2_ros/transform_listener.hpp>
+#include <tf2_ros/buffer.hpp>
 #include <laser_geometry/laser_geometry.hpp>
 
 #include "rclcpp/rclcpp.hpp"
@@ -101,8 +101,8 @@ LaserscanMerger::LaserscanMerger() : Node("laserscan_multi_merger")
 
 	this->laserscan_topic_parser();
 
-	point_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(cloud_destination_topic.c_str(), rclcpp::SensorDataQoS());
-	laser_scan_publisher_ = this->create_publisher<sensor_msgs::msg::LaserScan>(scan_destination_topic.c_str(), rclcpp::SensorDataQoS());
+	point_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(cloud_destination_topic.c_str(), rclcpp::SystemDefaultsQoS());
+	laser_scan_publisher_ = this->create_publisher<sensor_msgs::msg::LaserScan>(scan_destination_topic.c_str(), rclcpp::SystemDefaultsQoS());
 }
 
 rcl_interfaces::msg::SetParametersResult LaserscanMerger::reconfigureCallback(const std::vector<rclcpp::Parameter> &parameters)
